@@ -1,0 +1,21 @@
+CREATE TABLE IF NOT EXISTS alerts (
+  id                CHAR(36)       NOT NULL DEFAULT (UUID()) PRIMARY KEY,
+  user_id           CHAR(36)       NOT NULL,
+  symbol_id         INT            NOT NULL,
+  name              VARCHAR(200)   NOT NULL,
+  condition_type    ENUM('price_above','price_below','percent_change',
+                         'volume_spike','signal_triggered','rsi_overbought',
+                         'rsi_oversold','macd_crossover') NOT NULL,
+  condition_value   DECIMAL(20,8)  NOT NULL,
+  notification_type SET('email','push','in_app') NOT NULL DEFAULT 'in_app',
+  is_active         BOOLEAN        NOT NULL DEFAULT TRUE,
+  is_recurring      BOOLEAN        NOT NULL DEFAULT FALSE,
+  trigger_count     INT            NOT NULL DEFAULT 0,
+  triggered_at      DATETIME,
+  created_at        DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at        DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_alert_user   FOREIGN KEY (user_id)   REFERENCES users(id)   ON DELETE CASCADE,
+  CONSTRAINT fk_alert_symbol FOREIGN KEY (symbol_id) REFERENCES symbols(id),
+  INDEX idx_user_active (user_id, is_active),
+  INDEX idx_symbol      (symbol_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

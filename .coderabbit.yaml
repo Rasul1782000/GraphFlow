@@ -1,0 +1,108 @@
+# CodeRabbit AI Code Review Configuration for GraphFlow
+# Docs: https://docs.coderabbit.ai
+
+version: "2"
+
+language: "en-US"
+
+tone_instructions: |
+  Be a senior full-stack trading software engineer.
+  Focus on: TypeScript best practices, NestJS patterns, React performance,
+  security (JWT, SQL injection, CORS), and trading logic correctness.
+  Be concise and actionable. Prioritize security and data integrity issues.
+
+reviews:
+  profile: "chill"                     # assertive | chill
+  request_changes_workflow: false
+  high_level_summary: true
+  high_level_summary_placeholder: "@coderabbitai summary"
+  auto_title_placeholder: "@coderabbitai"
+  review_status: true
+  commit_status: true
+  poem: false
+  collapse_walkthrough: false
+
+  # Files to ignore during review
+  path_filters:
+    - "!**/node_modules/**"
+    - "!**/.next/**"
+    - "!**/dist/**"
+    - "!**/coverage/**"
+    - "!**/*.min.js"
+    - "!**/package-lock.json"
+    - "!**/yarn.lock"
+    - "!**/*.lock"
+    - "!db/seeds/**"
+
+  path_instructions:
+    # Backend — NestJS
+    - path: "backend/src/**/*.ts"
+      instructions: |
+        Review NestJS backend TypeScript code with focus on:
+        - Security: JWT validation, input sanitization, SQL injection prevention
+        - TypeORM best practices: proper transactions, no N+1 queries, indexed fields
+        - DTO validation completeness with class-validator
+        - Proper error handling with HttpException classes
+        - No hardcoded secrets or API keys
+        - Proper use of async/await (no floating promises)
+        - NestJS guards applied to sensitive routes
+        - Rate limiting on public auth endpoints
+
+    # Frontend — Next.js / React
+    - path: "frontend/src/**/*.tsx"
+      instructions: |
+        Review Next.js/React code with focus on:
+        - No useEffect missing dependencies (exhaustive-deps)
+        - Proper loading/error states for all async operations
+        - No sensitive data in localStorage beyond access tokens
+        - Accessibility (aria-labels, keyboard navigation)
+        - Performance: no unnecessary re-renders, proper memoization
+        - TypeScript strictness: no `any` types without justification
+        - Server Components vs Client Components used appropriately
+
+    # Database migrations
+    - path: "db/migrations/**/*.sql"
+      instructions: |
+        Review MySQL migration SQL for:
+        - Proper indexes on foreign keys and frequently queried columns
+        - Correct data types (DECIMAL for financial data, not FLOAT)
+        - Constraints: NOT NULL, UNIQUE, FK with proper ON DELETE behavior
+        - Partitioning strategy for time-series data (OHLCV table)
+        - No DROP TABLE without safety check in production migrations
+        - Character set: utf8mb4 for all tables
+
+    # Pine Script
+    - path: "pinescript/**/*.pine"
+      instructions: |
+        Review Pine Script v5 for:
+        - Correct use of request.security() if any
+        - alertcondition() present for all key signals
+        - No repainting logic (avoid future data lookback)
+        - Proper input parameter validation (minval, maxval)
+        - Performance: avoid heavy computation on every bar if possible
+
+    # CI/CD workflows
+    - path: ".github/workflows/**/*.yml"
+      instructions: |
+        Review GitHub Actions workflows for:
+        - No secrets in plain text
+        - Pinned action versions (not @main)
+        - Caching strategy for node_modules
+        - Test coverage gates
+        - Proper environment separation (staging vs production)
+
+  auto_review:
+    enabled: true
+    ignore_title_keywords:
+      - "WIP"
+      - "DO NOT MERGE"
+      - "Draft"
+      - "[skip ci]"
+    drafts: false
+    base_branches:
+      - "main"
+      - "develop"
+      - "staging"
+
+chat:
+  auto_reply: true

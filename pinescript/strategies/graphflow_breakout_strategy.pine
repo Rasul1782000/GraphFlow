@@ -1,0 +1,66 @@
+// @version=5
+// © GraphFlow Platform — Donchian Breakout Strategy v1.1
+strategy("GraphFlow Breakout [GF]", overlay=true,
+         initial_capital=10000, currency=currency.USD,
+         default_qty_type=strategy.percent_of_equity, default_qty_value=10,
+         commission_type=strategy.commission.percent, commission_value=0.1,
+         slippage=2, pyramiding=0, max_bars_back=500)
+
+// ── Inputs ────────────────────────────────────────────────────────────────────
+lookback   = input.int(20,   "Donchian Lookback",   minval=5,  maxval=100)
+atrMult    = input.float(1.5,"ATR Stop Multiplier", minval=0.5, step=0.1, maxval=5.0)
+atrLen     = input.int(14,   "ATR Length",          minval=5)
+filterEma  = input.int(200,  "Trend EMA Filter",    minval=20)
+tpMult     = input.float(3.0,"TP ATR Multiplier",   minval=1.0, step=0.5, maxval=10.0)
+useTrail   = input.bool(true, "Use Trailing Stop")
+trailMult  = input.float(2.0, "Trail ATR Multiplier", minval=0.5, step=0.5)
+
+// ── Core Calculations ─────────────────────────────────────────────────────────
+dc_upper   = ta.highest(high, lookback)[1]
+dc_lower   = ta.lowest(low,  lookback)[1]
+dc_mid     = math.avg(dc_upper, dc_lower)
+atr_val    = ta.atr(atrLen)
+ema_trend  = ta.ema(close, filterEma)
+
+// Conditions
+long_cond  = ta.crossover(close, dc_upper) and close > ema_trend
+short_cond = ta.crossunder(close, dc_lower) and close < ema_trend
+
+// ── Strategy Logic ────────────────────────────────────────────────────────────
+ticks(price) => math.round(price / syminfo.mintick)
+
+if long_cond and strategy.position_size == 0
+    sl = close - atr_val * atrMult
+    tp = close + atr_val * tpMult
+    strategy.entry("Long", strategy.long, comment="GF LONG")
+    if useTrail
+        strategy.exit("Long Exit", "Long", trail_points=ticks(atr_val * trailMult),
+                      trail_offset=ticks(atr_val * 0.5), loss=ticks(atr_val * atrMult))
+    else
+        strategy.exit("Long Exit", "Long", stop=sl, limit=tp)
+
+if short_cond and strategy.position_size == 0
+    sl = close + atr_val * atrMult
+    tp = close - atr_val * tpMult
+    strategy.entry("Short", strategy.short, comment="GF SHORT")
+    if useTrail
+        strategy.exit("Short Exit", "Short", trail_points=ticks(atr_val * trailMult),
+                      trail_offset=ticks(atr_val * 0.5), loss=ticks(atr_val * atrMult))
+    else
+        strategy.exit("Short Exit", "Short", stop=sl, limit=tp)
+
+// ── Visuals ───────────────────────────────────────────────────────────────────
+upper_plot = plot(dc_upper, "Upper Band", color.new(#22c55e, 50), 1, plot.style_line)
+lower_plot = plot(dc_lower, "Lower Band", color.new(#ef4444, 50), 1, plot.style_line)
+mid_plot   = plot(dc_mid,   "Mid Band",   color.new(#6b7280, 70), 1, plot.style_line)
+fill(upper_plot, lower_plot, color.new(#6366f1, 95))
+plot(ema_trend, "EMA Filter", color.new(#f59e0b, 40), 2)
+
+plotshape(long_cond,  "Long",  shape.triangleup,   location.belowbar, #22c55e, size=size.normal, text="LONG")
+plotshape(short_cond, "Short", shape.triangledown, location.abovebar, #ef4444, size=size.normal, text="SHORT")
+
+// ── Alerts ────────────────────────────────────────────────────────────────────
+if long_cond
+    alert("Breakout LONG Entry on " + syminfo.ticker, alert.freq_once_per_bar)
+if short_cond
+    alert("Breakout SHORT Entry on " + syminfo.ticker, alert.freq_once_per_bar)
