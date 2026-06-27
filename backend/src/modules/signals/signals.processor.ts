@@ -1,9 +1,9 @@
 import { Process, Processor } from '@nestjs/bull';
 import { Job } from 'bull';
 import { Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Signal } from './entities/signal.entity';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model, Types } from 'mongoose';
+import { Signal, SignalDocument } from './schemas/signal.schema';
 import { MarketGateway } from '../market/market.gateway';
 
 @Processor('signals')
@@ -11,33 +11,35 @@ export class SignalsProcessor {
     private readonly logger = new Logger('SignalsProcessor');
 
     constructor(
-        @InjectRepository(Signal) private readonly signalRepo: Repository<Signal>,
+        @InjectModel(Signal.name) private readonly signalModel: Model<SignalDocument>,
         private readonly gateway: MarketGateway,
     ) { }
 
     @Process('generate-signal')
-    async handleGenerateSignal(job: Job<{ symbolId: number; ticker: string; ohlcv: any[] }>) {
+    async handleGenerateSignal(job: Job<{ symbolId: string; ticker: string; ohlcv: any[] }>) {
         const { symbolId, ticker, ohlcv } = job.data;
 
-        const signal = this.calculateMomentumSignal(ohlcv);
-        if (!signal) return;
+        const signalResult = this.calculateMomentumSignal(ohlcv);
+        if (!signalResult) return;
 
-        const savedSignal = await this.signalRepo.save({
-            symbol_id: symbolId,
+        const signal = new this.signalModel({
+            symbol_id: new Types.ObjectId(symbolId),
             source: 'graphflow_momentum_v1',
-            type: signal.type,
-            strength: signal.strength,
+            type: signalResult.type,
+            strength: signalResult.strength,
             timeframe: '1h',
-            entry_price: signal.entry,
-            stop_loss: signal.stop,
-            take_profit: signal.tp,
-            risk_reward: signal.rr,
-            description: signal.description,
+            entry_price: signalResult.entry,
+            stop_loss: signalResult.stop,
+            take_profit: signalResult.tp,
+            risk_reward: signalResult.rr,
+            description: signalResult.description,
             expires_at: new Date(Date.now() + 4 * 60 * 60 * 1000),
         });
 
-        this.gateway.broadcastSignal({ ...savedSignal, ticker });
-        this.logger.log(`Signal generated for ${ticker}: ${signal.type} (strength: ${signal.strength})`);
+        const savedSignal = await signal.save();
+
+        this.gateway.broadcastSignal({ ...savedSignal.toObject(), ticker });
+        this.logger.log(`Signal generated for ${ticker}: ${signalResult.type} (strength: ${signalResult.strength})`);
         return savedSignal;
     }
 

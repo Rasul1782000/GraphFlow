@@ -1,40 +1,31 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model, Types } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
-import { User } from '../users/entities/user.entity';
-import { Symbol } from '../market/entities/symbol.entity';
-import { News } from '../market/entities/news.entity';
-import { Watchlist } from '../watchlist/entities/watchlist.entity';
-import { Portfolio } from '../portfolio/entities/portfolio.entity';
-import { Position } from '../portfolio/entities/position.entity';
-import { Trade } from '../portfolio/entities/trade.entity';
-import { Signal } from '../signals/entities/signal.entity';
-import { Alert } from '../alerts/entities/alert.entity';
+import { User, UserDocument } from '../users/schemas/user.schema';
+import { Symbol, SymbolDocument } from '../market/schemas/symbol.schema';
+import { News, NewsDocument } from '../market/schemas/news.schema';
+import { Watchlist, WatchlistDocument } from '../watchlist/schemas/watchlist.schema';
+import { Portfolio, PortfolioDocument } from '../portfolio/schemas/portfolio.schema';
+import { Position, PositionDocument } from '../portfolio/schemas/position.schema';
+import { Trade, TradeDocument } from '../portfolio/schemas/trade.schema';
+import { Signal, SignalDocument } from '../signals/schemas/signal.schema';
+import { Alert, AlertDocument } from '../alerts/schemas/alert.schema';
 
 @Injectable()
 export class SeedService implements OnModuleInit {
     private readonly logger = new Logger(SeedService.name);
 
     constructor(
-        @InjectRepository(User)
-        private readonly userRepo: Repository<User>,
-        @InjectRepository(Symbol)
-        private readonly symbolRepo: Repository<Symbol>,
-        @InjectRepository(News)
-        private readonly newsRepo: Repository<News>,
-        @InjectRepository(Watchlist)
-        private readonly watchlistRepo: Repository<Watchlist>,
-        @InjectRepository(Portfolio)
-        private readonly portfolioRepo: Repository<Portfolio>,
-        @InjectRepository(Position)
-        private readonly positionRepo: Repository<Position>,
-        @InjectRepository(Trade)
-        private readonly tradeRepo: Repository<Trade>,
-        @InjectRepository(Signal)
-        private readonly signalRepo: Repository<Signal>,
-        @InjectRepository(Alert)
-        private readonly alertRepo: Repository<Alert>,
+        @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
+        @InjectModel(Symbol.name) private readonly symbolModel: Model<SymbolDocument>,
+        @InjectModel(News.name) private readonly newsModel: Model<NewsDocument>,
+        @InjectModel(Watchlist.name) private readonly watchlistModel: Model<WatchlistDocument>,
+        @InjectModel(Portfolio.name) private readonly portfolioModel: Model<PortfolioDocument>,
+        @InjectModel(Position.name) private readonly positionModel: Model<PositionDocument>,
+        @InjectModel(Trade.name) private readonly tradeModel: Model<TradeDocument>,
+        @InjectModel(Signal.name) private readonly signalModel: Model<SignalDocument>,
+        @InjectModel(Alert.name) private readonly alertModel: Model<AlertDocument>,
     ) { }
 
     async onModuleInit() {
@@ -54,13 +45,13 @@ export class SeedService implements OnModuleInit {
     }
 
     private async seedUsers() {
-        const count = await this.userRepo.count();
+        const count = await this.userModel.countDocuments();
         if (count === 0) {
             this.logger.log('Seeding initial users...');
             const adminPassword = await bcrypt.hash('admin123', 10);
             const userPassword = await bcrypt.hash('user123', 10);
 
-            await this.userRepo.save([
+            await this.userModel.insertMany([
                 {
                     email: 'admin@graphflow.app',
                     username: 'admin',
@@ -82,25 +73,25 @@ export class SeedService implements OnModuleInit {
     }
 
     private async seedSymbols() {
-        const count = await this.symbolRepo.count();
+        const count = await this.symbolModel.countDocuments();
         if (count === 0) {
             this.logger.log('Seeding market symbols...');
-            await this.symbolRepo.save([
-                { ticker: 'AAPL', name: 'Apple Inc.', asset_class: 'stock', exchange: 'NASDAQ', currency: 'USD', sector: 'Technology', is_active: true },
-                { ticker: 'MSFT', name: 'Microsoft Corp', asset_class: 'stock', exchange: 'NASDAQ', currency: 'USD', sector: 'Technology', is_active: true },
-                { ticker: 'NVDA', name: 'NVIDIA Corp', asset_class: 'stock', exchange: 'NASDAQ', currency: 'USD', sector: 'Technology', is_active: true },
-                { ticker: 'BTCUSDT', name: 'Bitcoin / USDT', asset_class: 'crypto', exchange: 'Binance', currency: 'USDT', is_active: true },
-                { ticker: 'ETHUSDT', name: 'Ethereum / USDT', asset_class: 'crypto', exchange: 'Binance', currency: 'USDT', is_active: true },
+            await this.symbolModel.insertMany([
+                { ticker: 'AAPL', name: 'Apple Inc.', asset_class: 'stock', exchange: 'NASDAQ', currency: 'USD', sector: 'Technology', is_active: true, market_cap: 3000000000000 },
+                { ticker: 'MSFT', name: 'Microsoft Corp', asset_class: 'stock', exchange: 'NASDAQ', currency: 'USD', sector: 'Technology', is_active: true, market_cap: 3200000000000 },
+                { ticker: 'NVDA', name: 'NVIDIA Corp', asset_class: 'stock', exchange: 'NASDAQ', currency: 'USD', sector: 'Technology', is_active: true, market_cap: 2800000000000 },
+                { ticker: 'BTCUSDT', name: 'Bitcoin / USDT', asset_class: 'crypto', exchange: 'Binance', currency: 'USDT', is_active: true, market_cap: 1200000000000 },
+                { ticker: 'ETHUSDT', name: 'Ethereum / USDT', asset_class: 'crypto', exchange: 'Binance', currency: 'USDT', is_active: true, market_cap: 400000000000 },
                 { ticker: 'EURUSD', name: 'Euro / US Dollar', asset_class: 'forex', exchange: 'FX', currency: 'USD', is_active: true },
             ]);
         }
     }
 
     private async seedNews() {
-        const count = await this.newsRepo.count();
+        const count = await this.newsModel.countDocuments();
         if (count === 0) {
             this.logger.log('Seeding market news...');
-            await this.newsRepo.save([
+            await this.newsModel.insertMany([
                 {
                     title: 'Bitcoin Market Outlook 2026',
                     content: 'Experts predict continued adoption of BTC as a reserve asset...',
@@ -120,35 +111,33 @@ export class SeedService implements OnModuleInit {
     }
 
     private async seedWatchlists() {
-        const count = await this.watchlistRepo.count();
+        const count = await this.watchlistModel.countDocuments();
         if (count === 0) {
-            const user = await this.userRepo.findOne({ where: { username: 'demouser' } });
-            const symbols = await this.symbolRepo.find({ take: 3 });
+            const user = await this.userModel.findOne({ username: 'demouser' });
+            const symbols = await this.symbolModel.find().limit(3).exec();
 
             if (user && symbols.length > 0) {
                 this.logger.log('Seeding default watchlist for demo user...');
-                await this.watchlistRepo.save([
-                    {
-                        name: 'Core Tech Watchlist',
-                        description: 'Major technology companies to monitor',
-                        user,
-                        symbols,
-                    },
-                ]);
+                await this.watchlistModel.create({
+                    name: 'Core Tech Watchlist',
+                    description: 'Major technology companies to monitor',
+                    user_id: user._id,
+                    symbols: symbols.map(s => s._id),
+                });
             }
         }
     }
 
     private async seedPortfolios() {
-        const count = await this.portfolioRepo.count();
+        const count = await this.portfolioModel.countDocuments();
         if (count === 0) {
-            const user = await this.userRepo.findOne({ where: { username: 'demouser' } });
+            const user = await this.userModel.findOne({ username: 'demouser' });
             if (user) {
                 this.logger.log('Seeding portfolio and initial trades for demo user...');
-                const portfolio = await this.portfolioRepo.save({
+                const portfolio = await this.portfolioModel.create({
                     name: 'Default Portfolio',
                     description: 'Main trading account',
-                    user,
+                    user_id: user._id,
                     currency: 'USD',
                     initial_cash: 100000,
                     current_cash: 95000,
@@ -156,11 +145,11 @@ export class SeedService implements OnModuleInit {
                     is_paper: true,
                 });
 
-                const appleSymbol = await this.symbolRepo.findOne({ where: { ticker: 'AAPL' } });
+                const appleSymbol = await this.symbolModel.findOne({ ticker: 'AAPL' });
                 if (appleSymbol) {
-                    const position = await this.positionRepo.save({
-                        portfolio,
-                        symbol: appleSymbol,
+                    const position = await this.positionModel.create({
+                        portfolio_id: portfolio._id,
+                        symbol_id: appleSymbol._id,
                         side: 'buy',
                         quantity: 10,
                         avg_entry_price: 150.00,
@@ -168,10 +157,10 @@ export class SeedService implements OnModuleInit {
                         status: 'open',
                     });
 
-                    await this.tradeRepo.save({
-                        portfolio,
-                        position,
-                        symbol_id: appleSymbol.id,
+                    await this.tradeModel.create({
+                        portfolio_id: portfolio._id,
+                        position_id: position._id,
+                        symbol_id: appleSymbol._id,
                         type: 'buy',
                         quantity: 10,
                         price: 150.00,
@@ -184,13 +173,13 @@ export class SeedService implements OnModuleInit {
     }
 
     private async seedSignals() {
-        const count = await this.signalRepo.count();
+        const count = await this.signalModel.countDocuments();
         if (count === 0) {
-            const btcSymbol = await this.symbolRepo.findOne({ where: { ticker: 'BTCUSDT' } });
+            const btcSymbol = await this.symbolModel.findOne({ ticker: 'BTCUSDT' });
             if (btcSymbol) {
                 this.logger.log('Seeding trading signals...');
-                await this.signalRepo.save({
-                    symbol: btcSymbol,
+                await this.signalModel.create({
+                    symbol_id: btcSymbol._id,
                     source: 'Technical Analysis',
                     type: 'buy',
                     strength: 85,
@@ -206,15 +195,15 @@ export class SeedService implements OnModuleInit {
     }
 
     private async seedAlerts() {
-        const count = await this.alertRepo.count();
+        const count = await this.alertModel.countDocuments();
         if (count === 0) {
-            const user = await this.userRepo.findOne({ where: { username: 'demouser' } });
-            const ethSymbol = await this.symbolRepo.findOne({ where: { ticker: 'ETHUSDT' } });
+            const user = await this.userModel.findOne({ username: 'demouser' });
+            const ethSymbol = await this.symbolModel.findOne({ ticker: 'ETHUSDT' });
             if (user && ethSymbol) {
                 this.logger.log('Seeding price alerts...');
-                await this.alertRepo.save({
-                    user_id: user.id,
-                    symbol: ethSymbol,
+                await this.alertModel.create({
+                    user_id: user._id,
+                    symbol_id: ethSymbol._id,
                     name: 'ETH Breakout',
                     condition_type: 'above',
                     condition_value: 3000,

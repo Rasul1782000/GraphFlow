@@ -1,37 +1,36 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
-import { Portfolio } from './entities/portfolio.entity';
-import { Position } from './entities/position.entity';
-import { Trade } from './entities/trade.entity';
+import { InjectModel, InjectConnection } from '@nestjs/mongoose';
+import { Model, Connection, Types } from 'mongoose';
+import { Portfolio, PortfolioDocument } from './schemas/portfolio.schema';
+import { Position, PositionDocument } from './schemas/position.schema';
+import { Trade, TradeDocument } from './schemas/trade.schema';
 import { CreatePositionDto } from './dto/create-position.dto';
 import { ClosePositionDto } from './dto/close-position.dto';
 
 @Injectable()
 export class PortfolioService {
     constructor(
-        @InjectRepository(Portfolio) private readonly portfolioRepo: Repository<Portfolio>,
-        @InjectRepository(Position) private readonly positionRepo: Repository<Position>,
-        @InjectRepository(Trade) private readonly tradeRepo: Repository<Trade>,
-        private readonly dataSource: DataSource,
+        @InjectModel(Portfolio.name) private readonly portfolioModel: Model<PortfolioDocument>,
+        @InjectModel(Position.name) private readonly positionModel: Model<PositionDocument>,
+        @InjectModel(Trade.name) private readonly tradeModel: Model<TradeDocument>,
+        @InjectConnection() private readonly connection: Connection,
     ) { }
 
     async getUserPortfolios(userId: string) {
-        return this.portfolioRepo.find({
-            where: { user_id: userId },
-            relations: ['positions', 'positions.symbol'],
-            order: { created_at: 'DESC' },
-        });
+        return this.portfolioModel.find({ user_id: new Types.ObjectId(userId) })
+            .sort({ created_at: -1 })
+            .exec();
     }
 
     async createPortfolio(userId: string, data: Partial<Portfolio>) {
-        const portfolio = this.portfolioRepo.create({ ...data, user_id: userId });
-        return this.portfolioRepo.save(portfolio);
+        const portfolio = new this.portfolioModel({ ...data, user_id: new Types.ObjectId(userId) });
+        return portfolio.save();
     }
 
     async openPosition(portfolioId: string, userId: string, dto: CreatePositionDto) {
-        const portfolio = await this.portfolioRepo.findOne({
-            where: { id: portfolioId, user_id: userId },
+        const portfolio = await this.portfolioModel.findOne({
+            _id: new Types.ObjectId(portfolioId),
+            user_id: new Types.ObjectId(userId),
         });
         if (!portfolio) throw new NotFoundException('Portfolio not found');
 
@@ -42,50 +41,67 @@ export class PortfolioService {
             throw new BadRequestException('Insufficient cash balance');
         }
 
-        return this.dataSource.transaction(async (manager) => {
+        const session = await this.connection.startSession();
+        session.startTransaction();
+
+        try {
             // Deduct cash
             portfolio.current_cash -= total + fee;
-            await manager.save(portfolio);
+            await portfolio.save({ session });
 
             // Create position
-            const position = manager.create(Position, {
-                portfolio_id: portfolioId,
-                symbol_id: dto.symbol_id,
+            const position = new this.positionModel({
+                portfolio_id: portfolio._id,
+                symbol_id: new Types.ObjectId(dto.symbol_id),
                 side: dto.side || 'long',
                 quantity: dto.quantity,
                 avg_entry_price: dto.price,
                 stop_loss: dto.stop_loss,
                 take_profit: dto.take_profit,
             });
-            const savedPosition = await manager.save(position);
+            const savedPosition = await position.save({ session });
 
             // Record trade
-            const trade = manager.create(Trade, {
-                position_id: savedPosition.id,
-                portfolio_id: portfolioId,
-                symbol_id: dto.symbol_id,
+            const trade = new this.tradeModel({
+                position_id: savedPosition._id,
+                portfolio_id: portfolio._id,
+                symbol_id: new Types.ObjectId(dto.symbol_id),
                 type: dto.side === 'short' ? 'short' : 'buy',
                 quantity: dto.quantity,
                 price: dto.price,
                 total,
                 fee,
             });
-            await manager.save(trade);
+            await trade.save({ session });
 
+            await session.commitTransaction();
             return { position: savedPosition, trade, remaining_cash: portfolio.current_cash };
-        });
+        } catch (error) {
+            await session.abortTransaction();
+            throw error;
+        } finally {
+            session.endSession();
+        }
     }
 
     async closePosition(portfolioId: string, positionId: string, userId: string, dto: ClosePositionDto) {
-        const position = await this.positionRepo.findOne({
-            where: { id: positionId, portfolio_id: portfolioId, status: 'open' },
+        const position = await this.positionModel.findOne({
+            _id: new Types.ObjectId(positionId),
+            portfolio_id: new Types.ObjectId(portfolioId),
+            status: 'open'
         });
         if (!position) throw new NotFoundException('Open position not found');
 
-        const portfolio = await this.portfolioRepo.findOne({ where: { id: portfolioId, user_id: userId } });
+        const portfolio = await this.portfolioModel.findOne({
+            _id: new Types.ObjectId(portfolioId),
+            user_id: new Types.ObjectId(userId)
+        });
         if (!portfolio) throw new NotFoundException('Portfolio not found');
 
-        return this.dataSource.transaction(async (manager) => {
+        const session = await this.connection.startSession();
+        session.startTransaction();
+
+        try {
             const total = position.quantity * dto.exit_price;
             const fee = total * 0.001;
 
@@ -97,14 +113,14 @@ export class PortfolioService {
             position.closed_at = new Date();
             position.realized_pnl = pnl;
             position.unrealized_pnl = 0;
-            await manager.save(position);
+            await position.save({ session });
 
             portfolio.current_cash += total - fee;
-            await manager.save(portfolio);
+            await portfolio.save({ session });
 
-            const trade = manager.create(Trade, {
-                position_id: positionId,
-                portfolio_id: portfolioId,
+            const trade = new this.tradeModel({
+                position_id: position._id,
+                portfolio_id: portfolio._id,
                 symbol_id: position.symbol_id,
                 type: position.side === 'short' ? 'cover' : 'sell',
                 quantity: position.quantity,
@@ -113,32 +129,50 @@ export class PortfolioService {
                 fee,
                 notes: dto.notes,
             });
-            await manager.save(trade);
+            await trade.save({ session });
 
+            await session.commitTransaction();
             return { position, trade, pnl, remaining_cash: portfolio.current_cash };
-        });
+        } catch (error) {
+            await session.abortTransaction();
+            throw error;
+        } finally {
+            session.endSession();
+        }
     }
 
     async getPortfolioMetrics(portfolioId: string, userId: string) {
-        const portfolio = await this.portfolioRepo.findOne({
-            where: { id: portfolioId, user_id: userId },
-            relations: ['positions', 'positions.symbol'],
-        });
+        const portfolio = await this.portfolioModel.findOne({
+            _id: new Types.ObjectId(portfolioId),
+            user_id: new Types.ObjectId(userId)
+        }).exec();
+
         if (!portfolio) throw new NotFoundException('Portfolio not found');
 
-        const openPositions = portfolio.positions.filter(p => p.status === 'open');
-        const closedTrades = await this.tradeRepo.find({ where: { portfolio_id: portfolioId } });
-        const totalRealizedPnl = closedTrades.reduce((sum, t) => {
-            if (t.type === 'sell' || t.type === 'cover') {
-                const rel = portfolio.positions.find(p => p.id === t.position_id);
-                return sum + (rel?.realized_pnl || 0);
+        const openPositions = await this.positionModel.find({
+            portfolio_id: portfolio._id,
+            status: 'open'
+        }).populate('symbol_id').exec();
+
+        const closedTrades = await this.tradeModel.find({
+            portfolio_id: portfolio._id
+        }).exec();
+
+        const closedPositions = await Promise.all(
+            closedTrades.map(t => this.positionModel.findById(t.position_id).exec())
+        );
+
+        const totalRealizedPnl = closedPositions.reduce((sum, position) => {
+            if (position && position.realized_pnl) {
+                return sum + position.realized_pnl;
             }
             return sum;
         }, 0);
 
         const positionValue = openPositions.reduce(
-            (sum, p) => sum + p.quantity * (parseFloat(p.current_price as any) || parseFloat(p.avg_entry_price as any)), 0
+            (sum, p) => sum + p.quantity * (p.current_price || p.avg_entry_price), 0
         );
+
         const totalValue = portfolio.current_cash + positionValue;
         const totalPnl = totalValue - portfolio.initial_cash;
         const totalPnlPct = (totalPnl / portfolio.initial_cash) * 100;

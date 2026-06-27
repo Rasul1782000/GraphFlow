@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react';
 import { useSocket } from '@/app/providers';
 import { formatCurrency } from '@/lib/utils/formatters';
-import { cn } from '@/lib/utils/cn';
 
 const DEFAULT_TICKERS = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'AAPL', 'MSFT', 'NVDA', 'TSLA'];
 
@@ -22,27 +21,56 @@ export function PriceTickerBanner() {
     }, [socket]);
 
     return (
-        <div className="w-full overflow-hidden bg-neutral-900 border border-neutral-800 rounded-xl py-2.5 px-4">
-            <div className="flex items-center gap-6 animate-[scroll_30s_linear_infinite]">
+        <div className="banner-container">
+            <div className="banner-scroller">
                 {DEFAULT_TICKERS.map(ticker => {
                     const data = prices[ticker];
                     return (
-                        <div key={ticker} className="flex items-center gap-2 shrink-0">
-                            <span className="text-neutral-400 text-xs font-medium">{ticker}</span>
+                        <div key={ticker} className="ticker-item">
+                            <span className="ticker-name">{ticker}</span>
                             {data ? (
-                                <>
-                                    <span className="text-white text-xs font-mono">{formatCurrency(data.price)}</span>
-                                    <span className={cn('text-xs font-mono', data.changePercent >= 0 ? 'text-green-400' : 'text-red-400')}>
+                                <div className="ticker-values">
+                                    <span className="ticker-price">{formatCurrency(data.price)}</span>
+                                    <span className={`ticker-change ${data.changePercent >= 0 ? 'up' : 'down'}`}>
                                         {data.changePercent >= 0 ? '+' : ''}{data.changePercent.toFixed(2)}%
                                     </span>
-                                </>
+                                </div>
                             ) : (
-                                <span className="text-neutral-600 text-xs">—</span>
+                                <span className="ticker-price loading">—</span>
                             )}
                         </div>
                     );
                 })}
             </div>
+
+            <style jsx>{`
+                .banner-container { 
+                    width: 100%; 
+                    overflow: hidden; 
+                    background: #111; 
+                    border: 1px solid #222; 
+                    border-radius: 12px; 
+                    padding: 0.75rem 1.5rem; 
+                }
+                .banner-scroller { 
+                    display: flex; 
+                    align-items: center; 
+                    gap: 3rem; 
+                }
+                .ticker-item { 
+                    display: flex; 
+                    align-items: center; 
+                    gap: 0.75rem; 
+                    flex-shrink: 0; 
+                }
+                .ticker-name { font-size: 0.75rem; color: #555; font-weight: 800; text-transform: uppercase; }
+                .ticker-values { display: flex; align-items: center; gap: 0.5rem; }
+                .ticker-price { font-size: 0.8rem; color: #fff; font-family: 'var(--font-mono)', monospace; font-weight: 700; }
+                .ticker-price.loading { color: #222; }
+                .ticker-change { font-size: 0.75rem; font-weight: 700; font-family: 'var(--font-mono)', monospace; }
+                .ticker-change.up { color: #28a745; }
+                .ticker-change.down { color: #dc3545; }
+            `}</style>
         </div>
     );
 }

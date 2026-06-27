@@ -1,11 +1,10 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { MongooseModule } from '@nestjs/mongoose';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { BullModule } from '@nestjs/bull';
 import { ScheduleModule } from '@nestjs/schedule';
 import { CacheModule } from '@nestjs/cache-manager';
-import * as redisStore from 'cache-manager-redis-store';
 
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
@@ -23,32 +22,11 @@ import { SeedModule } from './modules/seed/seed.module';
             isGlobal: true,
             envFilePath: ['.env.local', '.env'],
         }),
-        TypeOrmModule.forRootAsync({
+        MongooseModule.forRootAsync({
             inject: [ConfigService],
-            useFactory: (config: ConfigService) => {
-                const host = config.get('DB_HOST', 'localhost');
-                const port = config.get<number>('DB_PORT', 3306);
-                const username = config.get('DB_USER');
-                const password = config.get('DB_PASSWORD');
-                const database = config.get('DB_NAME');
-
-                console.log(`🔌 Attempting to connect to ${host}:${port} as user "${username}" (DB: ${database})`);
-
-                return {
-                    type: 'mysql',
-                    host,
-                    port,
-                    username: username || 'root', // Fallback to root if DB_USER is missing
-                    password: password || '',
-                    database,
-                    entities: [__dirname + '/modules/**/entities/*.entity{.ts,.js}'],
-                    synchronize: config.get('NODE_ENV') !== 'production',
-                    logging: config.get('NODE_ENV') === 'development' ? ['error', 'warn'] : ['error'],
-                    timezone: 'Z',
-                    charset: 'utf8mb4',
-                    extra: { connectionLimit: 20 },
-                };
-            },
+            useFactory: (config: ConfigService) => ({
+                uri: config.get('MONGODB_URI'),
+            }),
         }),
         CacheModule.register({
             isGlobal: true,

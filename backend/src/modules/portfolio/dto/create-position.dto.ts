@@ -1,5 +1,5 @@
 export class CreatePositionDto {
-    symbol_id: number;
+    symbol_id: string;
     side: 'long' | 'short';
     quantity: number;
     price: number;

@@ -25,7 +25,7 @@ export class AuthService {
         const user = await this.usersService.create({ ...dto, password_hash: hash });
 
         // Create default portfolio for the new user
-        await this.portfolioService.createPortfolio(user.id, {
+        await this.portfolioService.createPortfolio(user._id.toString(), {
             name: 'Main Trading Terminal',
             initial_cash: 100000,
             current_cash: 100000,

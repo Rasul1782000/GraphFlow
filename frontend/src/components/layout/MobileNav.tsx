@@ -1,56 +1,35 @@
 'use client';
-import { useAuthStore } from '@/store/authStore';
-import { LayoutDashboard, TrendingUp, Briefcase, Radio, Search, Settings, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils/cn';
-import { useEffect, useRef } from 'react';
-import gsap from 'gsap';
+
+import { BrandLogo } from '@/components/ui/BrandLogo';
 
 export function MobileNav({ open, setOpen }: { open: boolean, setOpen: (o: boolean) => void }) {
     const pathname = usePathname();
-    const navRef = useRef(null);
-
-    useEffect(() => {
-        if (navRef.current) {
-            if (open) {
-                gsap.to(navRef.current, { x: 0, duration: 0.5, ease: 'power4.out' });
-            } else {
-                gsap.to(navRef.current, { x: '-100%', duration: 0.5, ease: 'power4.in' });
-            }
-        }
-    }, [open]);
 
     const items = [
-        { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-        { href: '/markets', label: 'Markets', icon: TrendingUp },
-        { href: '/portfolio', label: 'Portfolio', icon: Briefcase },
-        { href: '/signals', label: 'Signals', icon: Radio },
-        { href: '/screener', label: 'Screener', icon: Search },
-        { href: '/settings', label: 'Settings', icon: Settings },
+        { href: '/', label: 'Dashboard', icon: 'pi pi-home' },
+        { href: '/markets', label: 'Markets', icon: 'pi pi-chart-line' },
+        { href: '/portfolio', label: 'Portfolio', icon: 'pi pi-briefcase' },
+        { href: '/signals', label: 'Signals', icon: 'pi pi-bolt' },
+        { href: '/screener', label: 'Screener', icon: 'pi pi-search' },
+        { href: '/settings', label: 'Settings', icon: 'pi pi-cog' },
     ];
 
-    return (
-        <div
-            className={cn(
-                "fixed inset-0 z-[200] lg:hidden transition-opacity duration-300",
-                open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-            )}
-        >
-            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setOpen(false)} />
+    if (!open) return null;
 
-            <nav
-                ref={navRef}
-                className="absolute top-0 left-0 bottom-0 w-80 bg-neutral-900 border-r border-neutral-800 p-6 flex flex-col transform -translate-x-full"
-            >
-                <div className="flex items-center justify-between mb-8">
-                    <span className="text-2xl font-black text-white">Graph<span className="text-brand">Flow</span></span>
-                    <button onClick={() => setOpen(false)} className="p-2 bg-neutral-800 rounded-lg text-neutral-400">
-                        <X size={20} />
+    return (
+        <div className="mobile-nav-overlay" onClick={() => setOpen(false)}>
+            <nav className="mobile-nav-menu" onClick={(e) => e.stopPropagation()}>
+                <div className="mobile-nav-header">
+                    <BrandLogo size={32} />
+                    <button className="close-btn" onClick={() => setOpen(false)}>
+                        <i className="pi pi-times" />
                     </button>
                 </div>
 
-                <div className="space-y-2">
+                <div className="mobile-nav-items">
                     {items.map((item) => {
                         const active = pathname === item.href;
                         return (
@@ -58,18 +37,68 @@ export function MobileNav({ open, setOpen }: { open: boolean, setOpen: (o: boole
                                 key={item.href}
                                 href={item.href}
                                 onClick={() => setOpen(false)}
-                                className={cn(
-                                    "flex items-center gap-4 px-4 py-3 rounded-xl font-bold transition-all",
-                                    active ? "bg-brand text-white shadow-lg shadow-brand/20" : "text-neutral-400 hover:bg-neutral-800"
-                                )}
+                                className={cn('mobile-nav-item', active && 'active')}
                             >
-                                <item.icon size={20} />
-                                {item.label}
+                                <i className={cn(item.icon, 'nav-icon')} />
+                                <span>{item.label}</span>
                             </Link>
                         );
                     })}
                 </div>
             </nav>
+
+            <style jsx>{`
+                .mobile-nav-overlay {
+                    position: fixed;
+                    inset: 0;
+                    z-index: 200;
+                    background: rgba(0, 0, 0, 0.85);
+                    backdrop-filter: blur(4px);
+                    display: flex;
+                    justify-content: flex-start;
+                }
+                .mobile-nav-menu {
+                    width: 300px;
+                    background: #111;
+                    height: 100%;
+                    border-right: 1px solid #222;
+                    padding: 2rem;
+                    display: flex;
+                    flex-direction: column;
+                }
+                .mobile-nav-header {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    margin-bottom: 3rem;
+                }
+                .logo { font-size: 1.5rem; font-weight: 800; color: #fff; }
+                .accent { color: #007bff; }
+                .close-btn {
+                    background: #1a1a1a;
+                    border: none;
+                    color: #fff;
+                    padding: 0.5rem;
+                    border-radius: 8px;
+                    cursor: pointer;
+                }
+                
+                .mobile-nav-items { display: flex; flex-direction: column; gap: 0.5rem; }
+                .mobile-nav-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 1rem;
+                    padding: 1rem;
+                    border-radius: 12px;
+                    color: #999;
+                    text-decoration: none;
+                    font-weight: 600;
+                    transition: 0.2s;
+                }
+                .mobile-nav-item:hover { background: #1a1a1a; color: #fff; }
+                .mobile-nav-item.active { background: rgba(0, 123, 255, 0.1); color: #007bff; }
+                .nav-icon { font-size: 1.1rem; }
+            `}</style>
         </div>
     );
 }

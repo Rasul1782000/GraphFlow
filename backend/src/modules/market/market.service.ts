@@ -1,12 +1,12 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Cache } from 'cache-manager';
 import { Inject } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Symbol } from './entities/symbol.entity';
-import { Ohlcv } from './entities/ohlcv.entity';
+import { Symbol, SymbolDocument } from './schemas/symbol.schema';
+import { Ohlcv, OhlcvDocument } from './schemas/ohlcv.schema';
 import { GetOhlcvDto } from './dto/get-ohlcv.dto';
 import { MarketGateway } from './market.gateway';
 import axios from 'axios';
@@ -17,8 +17,8 @@ export class MarketService {
     private readonly logger = new Logger('MarketService');
 
     constructor(
-        @InjectRepository(Symbol) private readonly symbolRepo: Repository<Symbol>,
-        @InjectRepository(Ohlcv) private readonly ohlcvRepo: Repository<Ohlcv>,
+        @InjectModel(Symbol.name) private readonly symbolModel: Model<SymbolDocument>,
+        @InjectModel(Ohlcv.name) private readonly ohlcvModel: Model<OhlcvDocument>,
         @Inject(CACHE_MANAGER) private readonly cache: Cache,
         @Inject(forwardRef(() => MarketGateway))
         private readonly gateway: MarketGateway,
@@ -29,35 +29,37 @@ export class MarketService {
         const cached = await this.cache.get(cacheKey);
         if (cached) return cached as Symbol[];
 
-        const query = this.symbolRepo.createQueryBuilder('s').where('s.is_active = :a', { a: true });
-        if (assetClass) query.andWhere('s.asset_class = :ac', { ac: assetClass });
-        const symbols = await query.orderBy('s.market_cap', 'DESC').getMany();
+        const filter: any = { is_active: true };
+        if (assetClass) filter.asset_class = assetClass;
+        const symbols = await this.symbolModel.find(filter).sort({ market_cap: -1 }).exec();
 
         await this.cache.set(cacheKey, symbols, 300);
         return symbols as Symbol[];
     }
 
     async getOhlcv(symbol: string, dto: GetOhlcvDto) {
-        const sym = await this.symbolRepo.findOne({ where: { ticker: symbol.toUpperCase() } });
+        const sym = await this.symbolModel.findOne({ ticker: symbol.toUpperCase() }).exec();
         if (!sym) throw new NotFoundException(`Symbol ${symbol} not found`);
 
         const cacheKey = `ohlcv:${symbol}:${dto.timeframe}:${dto.limit}`;
         const cached = await this.cache.get(cacheKey);
         if (cached) return cached;
 
-        const data = await this.ohlcvRepo.find({
-            where: { symbol_id: sym.id, timeframe: dto.timeframe },
-            order: { open_time: 'DESC' },
-            take: dto.limit || 500,
-        });
+        const data = await this.ohlcvModel.find({
+            symbol_id: sym._id,
+            timeframe: dto.timeframe
+        })
+            .sort({ open_time: -1 })
+            .limit(dto.limit || 500)
+            .exec();
 
         const result = data.reverse().map(c => ({
             time: Math.floor(new Date(c.open_time).getTime() / 1000),
-            open: parseFloat(c.open as any),
-            high: parseFloat(c.high as any),
-            low: parseFloat(c.low as any),
-            close: parseFloat(c.close as any),
-            volume: parseFloat(c.volume as any),
+            open: c.open,
+            high: c.high,
+            low: c.low,
+            close: c.close,
+            volume: c.volume,
         }));
 
         await this.cache.set(cacheKey, result, 30);

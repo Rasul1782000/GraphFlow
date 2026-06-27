@@ -4,45 +4,70 @@ import { Navbar } from '@/components/layout/Navbar';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { useAuthStore } from '@/store/authStore';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
-import gsap from 'gsap';
+import { useEffect, useState } from 'react';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     const { user } = useAuthStore();
     const router = useRouter();
-    const mainRef = useRef(null);
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
     useEffect(() => {
         if (!user) {
             router.push('/login');
-        } else {
-            // Smooth reveal of main content area
-            gsap.fromTo(mainRef.current,
-                { opacity: 0, scale: 0.98, y: 10 },
-                { opacity: 1, scale: 1, y: 0, duration: 1.2, ease: 'expo.out', delay: 0.1 }
-            );
         }
     }, [user, router]);
 
     if (!user) return null;
 
     return (
-        <div className="flex h-screen bg-black overflow-hidden relative">
-            {/* Background Accent */}
-            <div className="absolute top-[-25%] right-[-10%] w-[50%] h-[50%] bg-brand/5 blur-[120px] rounded-full pointer-events-none" />
-            <div className="absolute bottom-[-20%] left-[-10%] w-[40%] h-[40%] bg-indigo-900/5 blur-[100px] rounded-full pointer-events-none" />
-
+        <div className="dashboard-container">
             <Sidebar />
 
-            <div className="flex flex-col flex-1 min-w-0 overflow-hidden relative z-10">
+            <div className="dashboard-main">
                 <Navbar onOpenMobileNav={() => setMobileNavOpen(true)} />
-                <main ref={mainRef} className="flex-1 overflow-y-auto p-4 lg:p-10 scrollbar-hide">
-                    {children}
+                <main className="dashboard-content">
+                    <div className="content-inner dashboard-glass">
+                        {children}
+                    </div>
                 </main>
             </div>
 
             <MobileNav open={mobileNavOpen} setOpen={setMobileNavOpen} />
+
+            <style jsx>{`
+                .dashboard-container {
+                    display: flex;
+                    height: 100vh;
+                    background: #05070a;
+                    overflow: hidden;
+                    position: relative;
+                }
+                .dashboard-main {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    min-width: 0;
+                    overflow: hidden;
+                    position: relative;
+                    z-index: 10;
+                }
+                .dashboard-content {
+                    flex: 1;
+                    overflow-y: auto;
+                    padding: 2.5rem;
+                    background: radial-gradient(circle at 50% 0%, #0d1117 0%, #05070a 100%);
+                }
+                .content-inner {
+                    padding: 2.5rem;
+                    min-height: 100%;
+                }
+                
+                @media (max-width: 1024px) {
+                    .dashboard-content { padding: 1rem; }
+                    .content-inner { padding: 1.5rem; border: none; border-radius: 0; background: transparent; }
+                    .dashboard-container :global(.sidebar-container) { display: none; }
+                }
+            `}</style>
         </div>
     );
 }

@@ -1,17 +1,12 @@
 'use client';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { useState, createContext, useContext, useEffect, useRef } from 'react';
-import { ThemeProvider } from 'next-themes';
-import { Toaster } from 'sonner';
 import { io, Socket } from 'socket.io-client';
 import { PrimeReactProvider } from 'primereact/api';
 
-// PrimeReact Styles
-import 'primereact/resources/themes/lara-dark-indigo/theme.css';
+// PrimeReact Styles (using minimalistic theme)
+import 'primereact/resources/themes/lara-light-blue/theme.css';
 import 'primereact/resources/primereact.min.css';
 import 'primeicons/primeicons.css';
-
 
 const SocketContext = createContext<Socket | null>(null);
 
@@ -20,13 +15,6 @@ export function useSocket() {
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
-    const [queryClient] = useState(() => new QueryClient({
-        defaultOptions: {
-            queries: { staleTime: 30_000, retry: 2, refetchOnWindowFocus: false },
-            mutations: { retry: 0 },
-        },
-    }));
-
     const socketRef = useRef<Socket | null>(null);
 
     useEffect(() => {
@@ -45,21 +33,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
     }, []);
 
     return (
-        <QueryClientProvider client={queryClient}>
-            <PrimeReactProvider value={{ ripple: true }}>
-                <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
-                    <SocketContext.Provider value={socketRef.current}>
-                        {children}
-                        <Toaster
-                            richColors
-                            position="top-right"
-                            toastOptions={{ className: 'bg-neutral-900 border border-neutral-800 text-white' }}
-                        />
-                    </SocketContext.Provider>
-                </ThemeProvider>
-            </PrimeReactProvider>
-            <ReactQueryDevtools initialIsOpen={false} />
-        </QueryClientProvider>
-
+        <PrimeReactProvider value={{ ripple: true }}>
+            <SocketContext.Provider value={socketRef.current}>
+                {children}
+            </SocketContext.Provider>
+        </PrimeReactProvider>
     );
 }

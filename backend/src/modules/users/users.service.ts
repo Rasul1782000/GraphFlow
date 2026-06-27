@@ -1,14 +1,29 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { User } from './entities/user.entity';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { User, UserDocument } from './schemas/user.schema';
 
 @Injectable()
 export class UsersService {
-    constructor(@InjectRepository(User) private userRepo: Repository<User>) { }
-    async findByEmail(email: string): Promise<User | null> { return this.userRepo.findOne({ where: { email } }); }
-    async findById(id: string): Promise<User | null> { return this.userRepo.findOne({ where: { id } }); }
-    async create(data: Partial<User>): Promise<User> { return this.userRepo.save(this.userRepo.create(data)); }
-    async updateRefreshToken(id: string, token: string) { await this.userRepo.update(id, { refresh_token: token }); }
-    async clearRefreshToken(id: string) { await this.userRepo.update(id, { refresh_token: null as any }); }
+    constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) { }
+
+    async findByEmail(email: string): Promise<UserDocument | null> {
+        return this.userModel.findOne({ email }).exec();
+    }
+
+    async findById(id: string): Promise<UserDocument | null> {
+        return this.userModel.findById(id).exec();
+    }
+
+    async create(data: Partial<User>): Promise<UserDocument> {
+        return new this.userModel(data).save();
+    }
+
+    async updateRefreshToken(id: string, token: string) {
+        await this.userModel.findByIdAndUpdate(id, { refresh_token: token }).exec();
+    }
+
+    async clearRefreshToken(id: string) {
+        await this.userModel.findByIdAndUpdate(id, { refresh_token: null }).exec();
+    }
 }

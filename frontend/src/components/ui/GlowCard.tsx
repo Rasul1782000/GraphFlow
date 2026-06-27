@@ -1,36 +1,43 @@
 'use client';
 import { ReactNode } from 'react';
-import { cn } from '@/lib/utils/cn';
 
 interface GlowCardProps {
     title?: string;
     children: ReactNode;
-    className?: string;
-    glowColor?: 'indigo' | 'green' | 'red' | 'none';
     headerRight?: ReactNode;
 }
 
-const glowMap = {
-    indigo: 'hover:shadow-[0_0_30px_rgba(99,102,241,0.15)] hover:border-indigo-500/40',
-    green: 'hover:shadow-[0_0_30px_rgba(34,197,94,0.15)]  hover:border-green-500/40',
-    red: 'hover:shadow-[0_0_30px_rgba(239,68,68,0.15)]  hover:border-red-500/40',
-    none: '',
-};
-
-export function GlowCard({ title, children, className, glowColor = 'indigo', headerRight }: GlowCardProps) {
+export function GlowCard({ title, children, headerRight }: GlowCardProps) {
     return (
-        <div className={cn(
-            'bg-neutral-900 border border-neutral-800 rounded-xl p-5 transition-all duration-300',
-            glowMap[glowColor],
-            className
-        )}>
+        <div className="card-container">
             {(title || headerRight) && (
-                <div className="flex items-center justify-between mb-4">
-                    {title && <h3 className="text-white font-semibold text-base">{title}</h3>}
+                <div className="card-header">
+                    {title && <h3>{title}</h3>}
                     {headerRight && <div>{headerRight}</div>}
                 </div>
             )}
-            {children}
+            <div className="card-body">
+                {children}
+            </div>
+
+            <style jsx>{`
+                .card-container { 
+                    background: #111; 
+                    border: 1px solid #222; 
+                    border-radius: 12px; 
+                    padding: 1.5rem; 
+                    transition: 0.3s;
+                    height: 100%;
+                }
+                .card-header { 
+                    display: flex; 
+                    justify-content: space-between; 
+                    align-items: center; 
+                    margin-bottom: 1.5rem; 
+                }
+                h3 { font-size: 1.1rem; color: #fff; margin: 0; font-weight: 700; }
+                .card-body { position: relative; }
+            `}</style>
         </div>
     );
 }

@@ -1,9 +1,9 @@
 import { Process, Processor } from '@nestjs/bull';
 import { Job } from 'bull';
 import { Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Alert } from './entities/alert.entity';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model, Types } from 'mongoose';
+import { Alert, AlertDocument } from './schemas/alert.schema';
 import { MarketGateway } from '../market/market.gateway';
 
 @Processor('alerts')
@@ -11,17 +11,18 @@ export class AlertsProcessor {
     private readonly logger = new Logger('AlertsProcessor');
 
     constructor(
-        @InjectRepository(Alert) private readonly alertRepo: Repository<Alert>,
+        @InjectModel(Alert.name) private readonly alertModel: Model<AlertDocument>,
         private readonly gateway: MarketGateway,
     ) { }
 
     @Process('check-alert')
     async handleCheckAlert(job: Job<{ alertId: string; currentPrice: number }>) {
         const { alertId, currentPrice } = job.data;
-        const alert = await this.alertRepo.findOne({
-            where: { id: alertId, is_active: true },
-            relations: ['symbol'],
-        });
+        const alert = await this.alertModel.findOne({
+            _id: new Types.ObjectId(alertId),
+            is_active: true
+        }).populate('symbol_id');
+
         if (!alert) return;
 
         const triggered = this.evaluateCondition(alert, currentPrice);
@@ -31,13 +32,13 @@ export class AlertsProcessor {
         alert.triggered_at = new Date();
         alert.trigger_count += 1;
         if (!alert.is_recurring) alert.is_active = false;
-        await this.alertRepo.save(alert);
+        await alert.save();
 
         // Notify via WebSocket
-        this.gateway.broadcastAlert(alert.user_id, {
-            alertId: alert.id,
+        this.gateway.broadcastAlert(alert.user_id.toString(), {
+            alertId: alert._id,
             name: alert.name,
-            symbol: (alert as any).symbol?.ticker,
+            symbol: (alert.symbol_id as any)?.ticker,
             condition: alert.condition_type,
             value: alert.condition_value,
             price: currentPrice,
@@ -48,7 +49,7 @@ export class AlertsProcessor {
     }
 
     private evaluateCondition(alert: Alert, price: number): boolean {
-        const val = parseFloat(alert.condition_value as any);
+        const val = alert.condition_value;
         switch (alert.condition_type) {
             case 'price_above': return price >= val;
             case 'price_below': return price <= val;
