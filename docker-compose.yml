@@ -1,0 +1,75 @@
+version: "3.9"
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: graphflow-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: graphflow
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: graphflow-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      target: production
+    container_name: graphflow-backend
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - ./backend/.env.docker
+    environment:
+      NODE_ENV: production
+      MONGODB_URI: mongodb://mongodb:27017/graphflow
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      FRONTEND_URL: http://localhost:3000
+
+  frontend:
+    build:
+      context: ./frontend
+      target: production
+    container_name: graphflow-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    env_file:
+      - ./frontend/.env.docker
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: http://localhost:4000/api/v1
+      NEXT_PUBLIC_SOCKET_URL: http://localhost:4000
+
+volumes:
+  mongodb_data:
+  redis_data:

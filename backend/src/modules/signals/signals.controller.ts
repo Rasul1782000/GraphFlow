@@ -1,9 +1,8 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { SignalsService } from './signals.service';
 import { CreateSignalDto } from './dto/create-signal.dto';
 import { SignalFilterDto } from './dto/signal-filter.dto';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { Public } from '../../common/decorators/public.decorator';
 
 @ApiTags('signals')
@@ -40,7 +39,6 @@ export class SignalsController {
     }
 
     @Post()
-    @UseGuards(JwtAuthGuard)
     @ApiBearerAuth('JWT')
     @ApiOperation({ summary: 'Create a new signal (admin)' })
     create(@Body() dto: CreateSignalDto) {

@@ -1,14 +1,12 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { WatchlistService } from './watchlist.service';
 import { CreateWatchlistDto } from './dto/create-watchlist.dto';
 import { UpdateWatchlistDto, AddSymbolDto } from './dto/update-watchlist.dto';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @ApiTags('watchlist')
 @Controller('watchlist')
-@UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT')
 export class WatchlistController {
     constructor(private readonly watchlistService: WatchlistService) {}

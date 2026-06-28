@@ -1,14 +1,12 @@
-import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { PortfolioService } from './portfolio.service';
 import { CreatePositionDto } from './dto/create-position.dto';
 import { ClosePositionDto } from './dto/close-position.dto';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @ApiTags('portfolio')
 @Controller('portfolio')
-@UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT')
 export class PortfolioController {
     constructor(private readonly portfolioService: PortfolioService) { }

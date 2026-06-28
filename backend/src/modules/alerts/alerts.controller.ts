@@ -1,14 +1,12 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AlertsService } from './alerts.service';
 import { CreateAlertDto } from './dto/create-alert.dto';
 import { UpdateAlertDto } from './dto/update-alert.dto';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @ApiTags('alerts')
 @Controller('alerts')
-@UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT')
 export class AlertsController {
     constructor(private readonly alertsService: AlertsService) {}

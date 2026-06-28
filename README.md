@@ -11,8 +11,10 @@ A full-stack **multi-asset trading platform** with real-time market data, portfo
 ![Next.js](https://img.shields.io/badge/Next.js-14.2-black?style=for-the-badge&logo=next.js)
 ![NestJS](https://img.shields.io/badge/NestJS-10.4-e0234e?style=for-the-badge&logo=nestjs)
 ![MongoDB](https://img.shields.io/badge/MongoDB-9.x-47A248?style=for-the-badge&logo=mongodb)
+![Redis](https://img.shields.io/badge/Redis-7.x-DC382D?style=for-the-badge&logo=redis)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=for-the-badge&logo=typescript)
 ![Socket.IO](https://img.shields.io/badge/Socket.IO-4.8-010101?style=for-the-badge&logo=socket.io)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker)
 ![License](https://img.shields.io/badge/License-Apache%202.0-blue?style=for-the-badge)
 
 ---
@@ -21,7 +23,7 @@ A full-stack **multi-asset trading platform** with real-time market data, portfo
 
 ## 🌟 Overview
 
-GraphFlow is a comprehensive trading platform designed for **stocks, crypto, forex, and ETFs**. It provides real-time market data via WebSockets, portfolio tracking with P&L analytics, AI-powered trading signals, price alerts, and a symbol screener — all wrapped in a sleek, dark-themed terminal UI.
+GraphFlow is a comprehensive trading platform designed for **stocks, crypto, forex, and ETFs**. It delivers real-time market data via WebSockets, portfolio tracking with P&L analytics, AI-powered momentum-based trading signals, configurable price alerts, a multi-filter market screener, custom watchlists, and TradingView-style candlestick charts — all wrapped in a sleek, dark-themed terminal UI.
 
 ### ✨ Key Features
 
@@ -30,11 +32,12 @@ GraphFlow is a comprehensive trading platform designed for **stocks, crypto, for
 | 🔄 **Real-Time Market Data** | Live price ticker via WebSocket for crypto, stocks, forex |
 | 📊 **Portfolio Management** | Track positions, P&L, trade history with MongoDB transactions |
 | 🎯 **Trading Signals** | Automated momentum-based signals (RSI + EMA + ATR analysis) |
-| 🔔 **Price Alerts** | Configurable alerts with WebSocket notifications |
+| 🔔 **Price Alerts** | Configurable alerts with WebSocket push notifications |
 | 🔍 **Market Screener** | Filter symbols by asset class, sector, market cap |
 | 📈 **Candlestick Charts** | TradingView Lightweight Charts with real-time updates |
 | 👁️ **Watchlists** | Custom symbol watchlists with live price feeds |
 | 🔐 **JWT Authentication** | Secure auth with access/refresh token rotation |
+| 🐳 **Dockerized** | Full-stack containerization with Docker Compose |
 | 📱 **Responsive Design** | Full mobile support with slide-out navigation |
 
 ---
@@ -43,45 +46,48 @@ GraphFlow is a comprehensive trading platform designed for **stocks, crypto, for
 
 ```
 GraphFlow/
-├── backend/                    # NestJS REST + WebSocket API
+├── backend/                      # NestJS REST + WebSocket API
 │   ├── src/
 │   │   ├── modules/
-│   │   │   ├── auth/           # Authentication (register, login, refresh)
-│   │   │   ├── users/          # User management
-│   │   │   ├── market/         # Market data, OHLCV, quotes, WebSocket gateway
-│   │   │   ├── portfolio/      # Portfolios, positions, trades
-│   │   │   ├── signals/        # Trading signal generation (Bull queue)
-│   │   │   ├── alerts/         # Price alert checking (Bull queue)
-│   │   │   ├── watchlist/      # User watchlists
-│   │   │   ├── screener/       # Market symbol screener
-│   │   │   └── seed/           # Database seeding
-│   │   ├── common/             # Guards, decorators, interceptors, filters
-│   │   ├── app.module.ts       # Root module
-│   │   └── main.ts             # Application entry point
-│   └── db/                     # SQL migrations (reference schema)
+│   │   │   ├── auth/             # Authentication (register, login, refresh)
+│   │   │   ├── users/            # User management
+│   │   │   ├── market/           # Market data, OHLCV, quotes, WebSocket gateway
+│   │   │   ├── portfolio/        # Portfolios, positions, trades
+│   │   │   ├── signals/          # Trading signal generation (Bull queue)
+│   │   │   ├── alerts/           # Price alert checking (Bull queue)
+│   │   │   ├── watchlist/        # User watchlists
+│   │   │   ├── screener/         # Market symbol screener
+│   │   │   └── seed/             # Database seeding
+│   │   ├── common/               # Guards, decorators, interceptors, filters
+│   │   ├── app.module.ts         # Root module
+│   │   └── main.ts               # Application entry point
+│   ├── db/_legacy/               # Legacy MySQL schema (reference only)
+│   ├── scripts/                  # Utility scripts
+│   └── test/                     # E2E tests
 │
-├── frontend/                   # Next.js 14 App Router
+├── frontend/                     # Next.js 14 App Router
 │   ├── src/
-│   │   ├── modules/            # 🔑 Modular architecture
-│   │   │   ├── auth/           # Login, Register pages
-│   │   │   ├── dashboard/      # Dashboard with widgets
-│   │   │   ├── markets/        # Market Pulse page
-│   │   │   ├── portfolio/      # Assets page
-│   │   │   ├── signals/        # Live Alpha page
-│   │   │   ├── screener/       # Discovery page
-│   │   │   ├── trade/          # Execution page
-│   │   │   ├── watchlist/      # Focus List page
-│   │   │   ├── alerts/         # Notifications page
-│   │   │   ├── settings/       # Terminal Setup page
-│   │   │   └── shared/         # Guards, route config
-│   │   ├── app/                # Thin route wrappers
-│   │   ├── components/         # Shared UI components
-│   │   ├── lib/                # API clients, utilities
-│   │   ├── hooks/              # Custom React hooks
-│   │   └── store/              # Zustand state management
-│   └── public/                 # Static assets
+│   │   ├── modules/              # Modular architecture
+│   │   │   ├── auth/             # Login, Register pages
+│   │   │   ├── dashboard/        # Dashboard with widgets
+│   │   │   ├── markets/          # Market Pulse page
+│   │   │   ├── portfolio/        # Assets page
+│   │   │   ├── signals/          # Live Alpha page
+│   │   │   ├── screener/         # Discovery page
+│   │   │   ├── trade/            # Execution page
+│   │   │   ├── watchlist/        # Focus List page
+│   │   │   ├── alerts/           # Notifications page
+│   │   │   ├── settings/         # Terminal Setup page
+│   │   │   └── shared/           # Guards, route config
+│   │   ├── app/                  # Thin route wrappers
+│   │   ├── components/           # Shared UI components
+│   │   ├── lib/                  # API clients, utilities
+│   │   ├── hooks/                # Custom React hooks (useWebSocket)
+│   │   └── store/                # Zustand state management
+│   └── pinescript/              # TradingView indicators & strategies
 │
-└── pinescript/                 # TradingView indicators & strategies
+├── .github/workflows/            # CI/CD pipelines
+└── docker-compose.yml            # Full-stack orchestration
 ```
 
 ---
@@ -90,40 +96,48 @@ GraphFlow/
 
 ### Prerequisites
 
-- **Node.js** >= 18.x
-- **MongoDB** >= 6.x (running on `localhost:27017`)
-- **Redis** >= 7.x (running on `localhost:6379`) — required for Bull queues
+- **Node.js** >= 18.x (v20 recommended)
+- **MongoDB** >= 6.x (or use Docker)
+- **Redis** >= 7.x (or use Docker)
+- **Docker** & **Docker Compose** (optional, for containerized setup)
 
-### 1️⃣ Clone the Repository
+### 🐳 Docker (Recommended)
+
+The fastest way to run the full stack:
 
 ```bash
 git clone https://github.com/Rasul1782000/GraphFlow.git
 cd GraphFlow
+docker compose up -d
 ```
 
-### 2️⃣ Setup Backend
+This starts: MongoDB 7, Redis 7, Backend (port 4000), Frontend (port 3000).
+
+### 🔧 Manual Setup
+
+#### Backend
 
 ```bash
 cd backend
-cp .env.example .env          # Configure environment variables
-npm install                    # Install dependencies
-npm run build                  # Build the project
-npm run start:dev              # Start in development mode
+cp .env.example .env
+npm install
+npm run build
+npm run start:dev
 ```
 
-The API server starts at **`http://localhost:4000`**
-Swagger docs at **`http://localhost:4000/api/docs`**
+- API: **http://localhost:4000**
+- Swagger: **http://localhost:4000/api/docs**
 
-### 3️⃣ Setup Frontend
+#### Frontend
 
 ```bash
 cd frontend
-cp .env.local.example .env.local   # Configure environment variables
-npm install                         # Install dependencies
-npm run dev                         # Start development server
+cp .env.local.example .env.local
+npm install
+npm run dev
 ```
 
-The frontend starts at **`http://localhost:3000`**
+- App: **http://localhost:3000**
 
 ---
 
@@ -152,6 +166,15 @@ JWT_REFRESH_EXPIRES_IN=7d
 
 # Market Data APIs
 ALPHA_VANTAGE_API_KEY=your_alpha_vantage_key
+BINANCE_API_KEY=your_binance_api_key
+BINANCE_SECRET_KEY=your_binance_secret_key
+YAHOO_FINANCE_RAPID_API_KEY=your_yahoo_finance_rapid_api_key
+
+# SMTP (email notifications)
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=your_email@example.com
+SMTP_PASS=your_email_password
 ```
 
 ### Frontend (`frontend/.env.local`)
@@ -221,7 +244,7 @@ All endpoints are prefixed with `/api/v1`.
 | `GET` | `/watchlist` | JWT | Get all watchlists |
 | `POST` | `/watchlist` | JWT | Create a watchlist |
 | `POST` | `/watchlist/:id/symbols` | JWT | Add symbol to watchlist |
-| `DELETE` | `/watchlist/:id/symbols/:sid` | JWT | Remove symbol |
+| `DELETE` | `/watchlist/:id/symbols/:sid` | JWT | Remove symbol from watchlist |
 | `DELETE` | `/watchlist/:id` | JWT | Delete watchlist |
 
 ### 🔍 Screener
@@ -238,9 +261,9 @@ Connect to the `/market` namespace:
 |-------|-----------|---------|
 | `subscribe_ticker` | Client → Server | `{ symbols: string[] }` |
 | `unsubscribe_ticker` | Client → Server | `{ symbols: string[] }` |
-| `ticker_update` | Server → Client | `{ symbol, price, change, volume, ... }` |
-| `new_signal` | Server → Client | Signal object |
-| `alert_triggered` | Server → Client | `{ alertId, name, symbol, price, ... }` |
+| `ticker_update` | Server → Client | `{ symbol, price, change, volume, bid, ask }` |
+| `new_signal` | Server → Client | Full signal object |
+| `alert_triggered` | Server → Client | `{ alertId, name, symbol, price, condition }` |
 
 ---
 
@@ -248,29 +271,17 @@ Connect to the `/market` namespace:
 
 | Route | Page | Description |
 |-------|------|-------------|
-| `/` | **Overview** | Dashboard with positions, movers, signals, portfolio |
-| `/markets` | **Market Pulse** | Symbol grid with live prices, asset filters |
+| `/` | **Overview** | Dashboard with positions, movers, signals, portfolio summary |
+| `/markets` | **Market Pulse** | Symbol grid with live prices, asset class filters |
 | `/portfolio` | **Assets** | Portfolio metrics, positions, trade history |
 | `/signals` | **Live Alpha** | Signal timeline with entry/SL/TP levels |
-| `/screener` | **Discovery** | Multi-filter symbol screener |
-| `/trade` | **Execution** | Chart + order form with side toggle |
-| `/watchlist` | **Focus List** | Custom watchlists with live quotes |
+| `/screener** | **Discovery** | Multi-filter symbol screener |
+| `/trade` | **Execution** | Candlestick chart + order form with side toggle |
+| `/watchlist` | **Focus List** | Custom watchlists with real-time quotes |
 | `/alerts` | **Notifications** | Price alert CRUD with toggle switches |
 | `/settings` | **Terminal Setup** | Profile, preferences, security |
 | `/login` | **Login** | Email/password authentication |
 | `/register` | **Register** | New account creation |
-
----
-
-## 🛡️ Security Features
-
-- **JWT Authentication** with access + refresh token rotation
-- **Password Hashing** with bcryptjs (12 rounds)
-- **Rate Limiting** via `@nestjs/throttler` (100 req/60s)
-- **Helmet** for HTTP security headers
-- **CORS** configured for frontend origin
-- **Input Validation** with `class-validator` DTOs
-- **MongoDB Transactions** for atomic portfolio operations
 
 ---
 
@@ -280,35 +291,62 @@ Connect to the `/market` namespace:
 
 | Technology | Purpose |
 |------------|---------|
-| NestJS 10 | Node.js framework |
-| MongoDB + Mongoose | Database |
-| Redis + Bull | Job queues for signals/alerts |
-| Socket.IO | WebSocket real-time updates |
-| Passport + JWT | Authentication |
-| Swagger | API documentation |
-| Axios | External API calls (Binance, Alpha Vantage) |
-| Helmet + Compression | Security & performance |
+| **NestJS 10** | Node.js framework (MVC, modular) |
+| **TypeScript 5.5** | Type safety |
+| **MongoDB + Mongoose 9** | Primary database |
+| **Redis + Bull 4** | Job queues for signals & alerts |
+| **Socket.IO 4** | WebSocket real-time market data |
+| **Passport.js** | JWT authentication strategy |
+| **Swagger** | API documentation |
+| **Axios** | External API calls (Binance, Alpha Vantage) |
+| **Helmet + Compression** | Security headers & gzip |
+| **Jest + Supertest** | Unit & E2E testing |
 
 ### Frontend
 
 | Technology | Purpose |
 |------------|---------|
-| Next.js 14 (App Router) | React framework |
-| TypeScript 5.9 | Type safety |
-| PrimeReact 10 | UI component library |
-| Zustand | State management (persisted) |
-| Socket.IO Client | WebSocket connection |
-| Lightweight Charts | TradingView candlestick charts |
-| Chart.js | Sparkline charts |
-| Axios | HTTP client with interceptors |
+| **Next.js 14 (App Router)** | React framework |
+| **TypeScript 5.6** | Type safety |
+| **PrimeReact 10** | UI component library |
+| **Zustand** | State management with localStorage persistence |
+| **Socket.IO Client** | WebSocket connection |
+| **Lightweight Charts** | TradingView candlestick charts |
+| **Chart.js** | Sparkline/mini charts |
+| **TanStack React Query** | Server state management |
+| **Axios** | HTTP client with interceptor-based token refresh |
+| **next-themes** | Theme management |
 
-### DevOps
+### PineScript (TradingView)
+
+| Script | Type | Description |
+|--------|------|-------------|
+| `graphflow_momentum.pine` | Indicator | Momentum composite (RSI + MACD + Stochastic) |
+| `graphflow_smart_money_concepts.pine` | Indicator | SMC (BOS, CHoCH, FVG, Order Blocks) |
+| `graphflow_breakout_strategy.pine` | Strategy | Donchian breakout with ATR-based stops |
+
+### DevOps & CI/CD
 
 | Technology | Purpose |
 |------------|---------|
-| GitHub | Version control |
-| CodeRabbit AI | Automated code review |
-| Apache 2.0 | License |
+| **Docker** | Multi-stage container builds |
+| **Docker Compose** | Local orchestration (MongoDB, Redis, backend, frontend) |
+| **GitHub Actions** | CI (lint, type-check, test, build) + CD (Docker push, SSH deploy) |
+| **CodeQL** | Weekly security analysis |
+| **CodeRabbit AI** | Automated code reviews |
+
+---
+
+## 🛡️ Security Features
+
+- **JWT Authentication** with access + refresh token rotation
+- **Password Hashing** with bcryptjs (12 rounds)
+- **Rate Limiting** via `@nestjs/throttler` (100 req/60s)
+- **Helmet** for HTTP security headers
+- **CORS** restricted to frontend origin
+- **Input Validation** with `class-validator` (whitelist + transform)
+- **MongoDB Transactions** for atomic portfolio operations
+- **Axios Interceptor** with automatic token refresh on 401
 
 ---
 
@@ -317,32 +355,42 @@ Connect to the `/market` namespace:
 ### Backend
 
 ```bash
-npm run build          # Build the project
-npm run start          # Start production server
-npm run start:dev      # Start in development mode (watch)
-npm run start:debug    # Start in debug mode
-npm run test           # Run unit tests
-npm run test:cov       # Run tests with coverage
-npm run test:e2e       # Run end-to-end tests
+npm run build           # Build TypeScript to dist/
+npm run start           # Start production server
+npm run start:dev       # Development mode with watch
+npm run start:debug     # Debug mode
+npm run start:prod      # node dist/main
+npm run test            # Run unit tests (Jest)
+npm run test:cov        # Tests with coverage report
+npm run test:e2e        # End-to-end tests
 ```
 
 ### Frontend
 
 ```bash
-npm run dev            # Start development server
-npm run build          # Build for production
-npm run start          # Start production server
-npm run lint           # Run ESLint
-npm run type-check     # Run TypeScript type checking
+npm run dev             # Start Next.js dev server
+npm run build           # Production build
+npm run start           # Start production server
+npm run lint            # Run ESLint
+npm run type-check      # TypeScript type checking (tsc --noEmit)
+```
+
+### Docker
+
+```bash
+docker compose up -d    # Start all services (detached)
+docker compose down     # Stop all services
+docker compose build    # Rebuild images
+docker compose logs -f  # Follow logs
 ```
 
 ---
 
 ## 🗺️ Roadmap
 
-- [ ] Docker & docker-compose setup
-- [ ] CI/CD with GitHub Actions
-- [ ] E2E test suite
+- [x] Docker & docker-compose setup
+- [x] CI/CD with GitHub Actions
+- [x] E2E test suite
 - [ ] Email notification service
 - [ ] Advanced charting indicators
 - [ ] Social trading features

@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { BullModule } from '@nestjs/bull';
 import { ScheduleModule } from '@nestjs/schedule';
 import { CacheModule } from '@nestjs/cache-manager';
-
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { MarketModule } from './modules/market/market.module';
@@ -15,6 +15,7 @@ import { AlertsModule } from './modules/alerts/alerts.module';
 import { WatchlistModule } from './modules/watchlist/watchlist.module';
 import { ScreenerModule } from './modules/screener/screener.module';
 import { SeedModule } from './modules/seed/seed.module';
+import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 
 @Module({
     imports: [
@@ -31,8 +32,8 @@ import { SeedModule } from './modules/seed/seed.module';
         CacheModule.register({
             isGlobal: true,
             ttl: 60,
-            max: 100, // Memory store fallback for local dev without Redis
-            store: 'memory', // Explicitly use memory store for local cache
+            max: 100,
+            store: 'memory',
         }),
         BullModule.forRootAsync({
             inject: [ConfigService],
@@ -48,6 +49,12 @@ import { SeedModule } from './modules/seed/seed.module';
         ScheduleModule.forRoot(),
         AuthModule, UsersModule, MarketModule, PortfolioModule,
         SignalsModule, AlertsModule, WatchlistModule, ScreenerModule, SeedModule,
+    ],
+    providers: [
+        {
+            provide: APP_GUARD,
+            useClass: JwtAuthGuard,
+        },
     ],
 })
 export class AppModule { }
